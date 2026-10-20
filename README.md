@@ -15,3 +15,16 @@ Defina `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` no Ra
 
 ## Pendências antes de produção completa
 Configurar o remetente e as URLs de autenticação no Supabase, integração WhatsApp Business API, substituição automática no backend, avisos automáticos e testes ponta a ponta. A criação e publicação de cultos depende do pastor.
+
+## Autenticação por e-mail
+No painel Supabase → Authentication → URL Configuration, configure:
+- Site URL: https://cscale-web-production.up.railway.app
+- Redirect URL: https://cscale-web-production.up.railway.app/**
+
+O login usa um link no e-mail. A igreja deverá configurar as políticas de envio e o SMTP se necessário.
+
+## WhatsApp
+O banco tem a fila `notification_outbox` e gatilhos de convites, resumos e substituições. O envio real depende de configurar a WhatsApp Business Cloud API, seu token e modelos de mensagem aprovados; nenhuma mensagem é enviada sem essas credenciais.
+
+## Testes
+`npm test` executa testes unitários do algoritmo. `npm run build` valida o aplicativo.
