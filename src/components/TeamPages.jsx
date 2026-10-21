@@ -13,11 +13,7 @@ export function TeamPage({role,client,members,ministries,functions,busy,onRun}){
  const copy=async m=>{try{await navigator.clipboard.writeText(link(m));alert('Link copiado!')}catch{alert('Link: '+link(m))}};
  return <>
   <PageHead eyebrow="PESSOAS E MINISTÉRIOS" title="Voluntários" description={isPastor?'Acompanhe os cadastros e as qualificações de todas as equipes.':'Acompanhe e valide os voluntários dos seus ministérios.'} action={<Badge tone="purple">{members.length} cadastrados</Badge>}/>
-  <div className="dashboard-grid mb-3">
-   <div className="col-4"><Metric icon={UsersRound} label="Pessoas cadastradas" value={members.length} caption="Perfis visíveis para sua liderança" tone="blue"/></div>
-   <div className="col-4"><Metric icon={UserRoundCheck} label="Perfis aprovados" value={members.filter(p=>p.approved).length} caption="Cadastros liberados pela igreja" tone="green"/></div>
-   <div className="col-4"><Metric icon={Clock3} label="Funções a aprovar" value={waiting.length} caption="Qualificações aguardando análise" tone="orange"/></div>
-  </div>
+  <div className="simple-inline-status"><UsersRound size={17}/><strong>{members.length} pessoas</strong><span>{members.filter(p=>p.approved).length} aprovadas{waiting.length>0?' · '+waiting.length+' funções aguardando aprovação':''}</span></div>
   {waiting.length>0&&<Panel className="mb-3" title="Aprovações pendentes" subtitle="Verifique a função do voluntário antes de aprová-la.">
    <div className="stack">{waiting.map(r=><div className="mini-summary row spread" key={r.id}><div className="row"><Avatar name={r.person.full_name}/><div><strong className="person-name">{r.person.full_name}</strong><div className="inline-muted">{ministries.find(m=>m.id===r.ministry_id)?.name} • {functions.find(f=>f.id===r.function_id)?.name||'Equipe geral'}</div></div></div><Btn icon={CheckCheck} small disabled={busy} onClick={()=>approve(r.id,'profile_roles')}>Aprovar função</Btn></div>)}</div>
   </Panel>}
