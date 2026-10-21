@@ -21,7 +21,7 @@ function Registration({user,working,error,notice,onRegister}){
  const [form,setForm]=useState({name:'',phone:'',limit:4,vocal:'nao_informada'});
  return <div className="sign-landing"><div className="sign-left"><div className="sign-brand"><span className="logo-mark"><Church size={26}/></span>C Scale.</div><div><div className="eyebrow" style={{color:'#b4adff'}}>PRIMEIRO ACESSO</div><h1 className="sign-title">Bem-vindo ao<br/>seu ministério.</h1><p className="sign-lead">Preencha seus dados para que a liderança possa preparar uma escala que respeite seu tempo e sua disponibilidade.</p></div><small>Lagoinha Sorocaba · Juntos, fazemos mais.</small></div><div className="sign-right"><form className="sign-form" onSubmit={e=>{e.preventDefault();onRegister(form)}}><div className="eyebrow">CADASTRO DE VOLUNTÁRIO</div><h2>Conte-nos sobre você</h2><p>Seu acesso por e-mail já está ativo: {user.email}</p>{error&&<div className="alert error">{error}</div>}{notice&&<div className="alert">{notice}</div>}<label>Nome completo</label><input value={form.name} required minLength={5} onChange={e=>setForm(v=>({...v,name:e.target.value}))} placeholder="Nome e sobrenome"/><label>WhatsApp com DDD</label><input value={form.phone} required onChange={e=>setForm(v=>({...v,phone:e.target.value}))} placeholder="(15) 99999-9999"/><label>Máximo de cultos por mês</label><input type="number" min={1} max={30} value={form.limit} onChange={e=>setForm(v=>({...v,limit:e.target.value}))}/><label>Grupo vocal (opcional)</label><select value={form.vocal} onChange={e=>setForm(v=>({...v,vocal:e.target.value}))}><option value="nao_informada">Não se aplica</option><option value="masculina">Voz masculina</option><option value="feminina">Voz feminina</option></select><Btn className="w-full mt-3" type="submit" disabled={working} icon={ArrowRight}>Concluir cadastro</Btn></form></div></div>;
 }
-export default function CScaleApp(){
+export default function CScaleApp({expectedSlug=null}){
  const client=useMemo(()=>{try{return db()}catch{return null}},[]);
  const [user,setUser]=useState(null),[authReady,setAuthReady]=useState(false);
  const [data,setData]=useState(emptyData),[loading,setLoading]=useState(false),[working,setWorking]=useState(false);
@@ -99,7 +99,7 @@ export default function CScaleApp(){
  useEffect(()=>{if(!user){routed.current=false;setData(emptyData);setLoading(false);return}void load()},[user,load]);
  const onRun=async(fn,success)=>{
   setWorking(true);setError('');setNotice('');
-  try{await fn();setNotice(success||'Alterações salvas.');await load();return true}
+  try{await fn();if(success!==null)setNotice(success||'Alterações salvas.');await load();return true}
   catch(e){setError(msg(e));return false}
   finally{setWorking(false)}
  };
@@ -108,7 +108,8 @@ export default function CScaleApp(){
   const request=signup?client.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin}}):client.auth.signInWithPassword({email,password});
   const {data:result,error:err}=await request;if(err)throw err;
   if(signup&&!result.session){setNotice('Confirme o e-mail enviado para '+email+' e entre com sua senha.');return}
- },'Acesso autenticado.');
+  setNotice('Acesso autenticado.');
+ },null);
  const register=(form)=>onRun(async()=>{
   if(!user)throw Error('É necessário entrar primeiro.');
   if(form.name.trim().length<5)throw Error('Informe seu nome completo.');
@@ -120,6 +121,7 @@ export default function CScaleApp(){
  if(!user)return <Login client={client} working={working} onSignIn={authenticate} notice={notice} error={error}/>;
  if(loading&&!data.profile)return <div style={{minHeight:'100vh',display:'grid',placeItems:'center',gap:15}}><div className="stack" style={{alignItems:'center'}}><div className="logo-mark"><Church size={26}/></div><p className="muted">Preparando seu painel...</p></div></div>;
  if(!data.profile)return <Registration user={user} working={working} error={error} notice={notice} onRegister={register}/>;
+ if(expectedSlug&&expectedSlug!==data.profile.slug)return <div className="sign-landing"><div className="sign-left"><div className="sign-brand"><span className="logo-mark"><Church size={26}/></span>C Scale.</div><h1 className="sign-title">Cada escala tem seu lugar.</h1><p className="sign-lead">Este link pertence a outro voluntário. Sua conta continua protegida.</p></div><div className="sign-right"><div className="sign-form"><h2>Link pessoal diferente</h2><p>Use seu próprio link para consultar seus compromissos.</p><Btn className="w-full" onClick={()=>window.location.assign('/')}>Abrir meu painel</Btn></div></div></div>;
  const role=data.manager?.role||'volunteer';
  const isAdmin=role==='pastor'||role==='leader';
  const permitted=role==='pastor'?data.ministries:data.ministries.filter(m=>data.scopes.some(s=>s.profile_id===data.profile.id&&s.ministry_id===m.id));
