@@ -14,7 +14,7 @@ const initial={name:'',phone:'',limit:4,group:'nao_informada'};
 export default function Page(){
  const client=useMemo(()=>{try{return db()}catch{return null}},[]);
  const [user,setUser]=useState(null),[ready,setReady]=useState(false);
- const [email,setEmail]=useState(''),[otp,setOtp]=useState(''),[mailSent,setMailSent]=useState(false);
+ const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[createMode,setCreateMode]=useState(false),[mailSent,setMailSent]=useState(false);
  const [profile,setProfile]=useState(null),[manager,setManager]=useState(null),[tab,setTab]=useState('minhas');
  const [ministries,setMinistries]=useState([]),[skills,setSkills]=useState([]),[mySkills,setMySkills]=useState([]);
  const [availability,setAvailability]=useState([]),[exceptions,setExceptions]=useState([]),[newAvailability,setNewAvailability]=useState({weekday:3,start:'18:00',end:'23:00',overnight:false}),[exception,setException]=useState({date:'',note:''});
@@ -76,10 +76,27 @@ export default function Page(){
  }
  async function sendLogin(e){
   e.preventDefault();if(!client)return;
-  await action(async()=>{const r=await client.auth.signInWithOtp({email:email.trim(),options:{emailRedirectTo:window.location.origin}});if(r.error)throw r.error;setMailSent(true);setMessage('Confira sua caixa de entrada para acessar o C Scale.')});
- }
- async function verify(e){
-  e.preventDefault();await action(async()=>{const r=await client.auth.verifyOtp({email:email.trim(),token:otp.trim(),type:'email'});if(r.error)throw r.error;setMessage('Acesso confirmado.')});
+  if(!email.trim()||password.length<8){setError('Informe um e-mail válido e uma senha de pelo menos 8 caracteres.');return}
+  await action(async()=>{
+    if(createMode){
+      const result=await client.auth.signUp({
+        email:email.trim().toLowerCase(),
+        password,
+        options:{emailRedirectTo:window.location.origin}
+      });
+      if(result.error)throw result.error;
+      setMailSent(true);
+      setMessage(result.data.session?
+        'Cadastro de acesso criado. Complete seu perfil para continuar.':
+        'Cadastro solicitado. Verifique o e-mail da igreja para ativar o acesso. Depois, volte aqui e entre com sua senha.');
+      setCreateMode(false);
+    }else{
+      const result=await client.auth.signInWithPassword({email:email.trim().toLowerCase(),password});
+      if(result.error)throw result.error;
+      setPassword('');
+      setMessage('Acesso realizado com sucesso.');
+    }
+  });
  }
  async function register(e){
   e.preventDefault();await action(async()=>{
@@ -139,10 +156,17 @@ export default function Page(){
  if(!ready)return <main className="login card"><h2>C Scale</h2><p>Carregando seu acesso...</p></main>;
  return <main className="shell">
   <header className="top"><div className="brand"><div className="brand-mark"><Church size={26}/></div><div>C Scale<div className="tagline">Church Scale · Lagoinha</div></div></div>{user&&<button className="secondary" onClick={()=>client.auth.signOut()}><LogOut size={15}/> Sair</button>}</header>
-  {!user?<div className="wrap"><div className="card login"><h2>Bem-vindo ao C Scale</h2><p className="muted">Seu ministério organizado em um só lugar. Entre com o e-mail associado ao seu cadastro.</p>
-   <form onSubmit={sendLogin}><label>Seu e-mail</label><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="seuemail@exemplo.com"/><div className="actions"><button disabled={busy||!client}>Enviar link de acesso</button></div></form>
-   {mailSent&&<form onSubmit={verify} style={{marginTop:20}}><p className="muted">Caso seu e-mail tenha recebido um código de seis dígitos, informe abaixo.</p><label>Código recebido</label><input value={otp} onChange={e=>setOtp(e.target.value)} placeholder="Código de 6 dígitos"/><div className="actions"><button disabled={busy||otp.length<6} className="secondary">Confirmar código</button></div></form>}
-   {message&&<p className="notice">{message}</p>}{error&&<p className="error">{error}</p>}</div></div>:
+  {!user?<div className="wrap"><div className="card login"><h2>{createMode?'Criar acesso':'Acessar C Scale'}</h2><p className="muted">Entre com o e-mail e a senha do seu cadastro. O primeiro acesso exige confirmação do e-mail para proteger os voluntários e os dados da igreja.</p>
+   <form onSubmit={sendLogin} className="stack">
+    <div><label>Seu e-mail</label><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="seuemail@exemplo.com" autoComplete="email"/></div>
+    <div><label>Senha</label><input type="password" minLength="8" required value={password} onChange={e=>setPassword(e.target.value)} autoComplete={createMode?'new-password':'current-password'} placeholder="Mínimo de 8 caracteres"/></div>
+    <button disabled={busy||!client}>{createMode?'Criar acesso':'Entrar'}</button>
+    <button type="button" className="secondary" onClick={()=>{setCreateMode(!createMode);setMailSent(false);setError('');setMessage('')}}>{createMode?'Já tenho cadastro — entrar':'Primeiro acesso — criar conta'}</button>
+   </form>
+   {mailSent&&<p className="muted" style={{marginTop:13}}>A confirmação de e-mail pode abrir uma página de redirecionamento. Se isso ocorrer, volte para este site e faça login após confirmar.</p>}
+   {message&&<p className="notice">{message}</p>}{error&&<p className="error">{error}</p>}
+   <p className="sm">C Scale · Igreja Lagoinha. Nunca compartilhe sua senha com outras pessoas.</p>
+  </div></div>:
   <div className="wrap">
    {error&&<div className="error">{error}</div>}{message&&<div className="notice">{message}</div>}
    {!profile?<div className="card login"><h2>Meu cadastro</h2><p className="muted">Preencha seus dados para participar das escalas. A liderança aprovará sua função.</p><form onSubmit={register} className="stack"><div><label>Nome completo</label><input required value={reg.name} onChange={e=>setReg(v=>({...v,name:e.target.value}))}/></div><div><label>WhatsApp com DDD</label><input required value={reg.phone} onChange={e=>setReg(v=>({...v,phone:e.target.value}))} placeholder="(15) 99999-9999"/></div><div><label>Quantidade máxima de cultos por mês</label><input type="number" min="1" max="30" value={reg.limit} onChange={e=>setReg(v=>({...v,limit:e.target.value}))}/></div><div><label>Grupo de voz (se participa do louvor)</label><select value={reg.group} onChange={e=>setReg(v=>({...v,group:e.target.value}))}><option value="nao_informada">Não se aplica</option><option value="masculina">Voz masculina</option><option value="feminina">Voz feminina</option></select></div><button disabled={busy}>Criar meu cadastro</button></form></div>:
