@@ -210,7 +210,7 @@ export default function DemoPortal(){
   if(section==='disponibilidade')return <><PageHead eyebrow="MEU TEMPO" title="Disponibilidade semanal" description="Exemplo de intervalos de trabalho do voluntário."/><Panel title="Horários fictícios"><div className="demo-list"><div className="demo-listrow"><b>Domingo</b><small>06:00 às 23:30</small></div><div className="demo-listrow"><b>Quarta-feira</b><small>16:00 às 23:30</small></div></div></Panel></>;
   return <DemoVolunteer key={userId} person={user} services={services} assignments={assignments} functions={functions} people={users} onConfirm={finalize} month={month}/>;
  };
- return <AppShell role={role} profile={user} section={section} setSection={navigate} pending={pending} signOut={()=>window.location.assign('/')}>
+ return <AppShell role={role} profile={user} section={section} setSection={navigate} pending={pending} signOut={()=>window.location.assign(window.location.pathname.startsWith('/functions/v1/cscale-site')?'/functions/v1/cscale-site/':'/')}>
   <div className="demo-simple-bar">
     <div><span className="demo-indicator">MODO DEMONSTRAÇÃO</span><h2>Testar como:</h2><p>Escolha um perfil para visualizar o sistema. Tudo aqui é fictício.</p></div>
     <div className="demo-role-pills" role="group" aria-label="Escolher um perfil de teste">

@@ -2,7 +2,7 @@ import {defineConfig} from 'vite';
 import {resolve} from 'node:path';
 export default defineConfig({
  root:resolve(process.cwd(),'preview'),
- base:'/Cscale/',
+ base:'/functions/v1/cscale-site/',
  define:{
   'process.env.NEXT_PUBLIC_SUPABASE_URL':JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL),
   'process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY':JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
