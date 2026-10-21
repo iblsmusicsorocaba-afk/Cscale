@@ -4,7 +4,8 @@ import {QrCode,MessageCircle,Smartphone,ShieldCheck,RefreshCw,CheckCheck,Link2Of
 import {PageHead,Btn,Badge} from './ui';
 const labels={unconfigured:'Configuração pendente',disconnected:'Não conectado',connecting:'Preparando conexão',qr:'Aguardando leitura',connected:'Número conectado',offline:'Serviço indisponível'};
 export function WhatsAppSettings({client,demo=false}){
- const demoMode=demo||(typeof window!=='undefined'&&window.location.pathname.startsWith('/functions/v1/cscale-site'));
+ const staticPreview=typeof window!=='undefined'&&window.location.pathname.startsWith('/functions/v1/cscale-site');
+ const demoMode=demo||staticPreview;
  const [state,setState]=useState({status:demoMode?'demo':'loading',qrCode:null,senderPhone:null});
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useState('');
  const refresh=useCallback(async()=>{
@@ -36,7 +37,7 @@ export function WhatsAppSettings({client,demo=false}){
  return <>
   <PageHead eyebrow="CONFIGURAÇÕES DA IGREJA" title="WhatsApp da igreja" description="Conecte o número que será usado para avisar os voluntários sobre as escalas."/>
   <div className="wa-intro"><div className="wa-intro-icon"><MessageCircle size={27}/></div><div><div className="wa-intro-kicker">CANAL DE COMUNICAÇÃO</div><h2>Um número para todas as escalas</h2><p>O pastor controla a conexão. Os voluntários não veem o QR Code nem as credenciais.</p></div><Badge tone={connected?'green':waiting?'amber':'purple'}>{demoMode?'Prévia':labels[status]||'Verificando'}</Badge></div>
-  {demoMode&&<div className="wa-info-line"><Info size={18}/><span>Esta é uma prévia. Entre com a conta real do pastor para vincular um número de verdade.</span></div>}
+  {demoMode&&<div className="wa-info-line"><Info size={18}/><span>Este é o site alternativo no Supabase. A conexão por QR Code exige o servidor privado no Railway e está temporariamente indisponível aqui.</span></div>}
   {success&&<div className="alert" role="status"><CheckCheck size={18}/>{success}</div>}
   {error&&<div className="alert error" role="alert"><Info size={18}/>{error}</div>}
   <div className="wa-content">
