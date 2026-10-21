@@ -1,3 +1,2 @@
-'use client';
-import Page from '../../page';
-export default Page;
+import CScaleApp from '../../../components/CScaleApp';
+export default async function Page({params}){const {slug}=await params;return <CScaleApp expectedSlug={slug}/>}
