@@ -3,6 +3,7 @@ import React,{useMemo,useState} from 'react';
 import {Church,UsersRound,CalendarDays,Clock3,ShieldCheck,Music2,RotateCcw,CheckCheck,UserRound,Search,Plus,Send,Download,ArrowRight,HeartHandshake,SlidersHorizontal,AlertTriangle} from 'lucide-react';
 import {AppShell} from './AppShell';
 import {Dashboard} from './Dashboard';
+import {ScheduleCard,minimumForMinistry} from './ScheduleCard';
 import {WhatsAppSettings} from './WhatsAppSettings';
 import {Panel,PageHead,Metric,Badge,Btn,Empty,Avatar,Modal,dateFmt,monthKey,monthLabel} from './ui';
 import roster from '../../fixtures/demo-roster.json';
@@ -83,27 +84,44 @@ function csvDownload(people){
  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download='cscale-73-usuarios-ficticios.csv';a.click();URL.revokeObjectURL(url);
 }
-function DemoCalendar({services,assignments,ministries:scope,month,onAdd,onGenerate,role}){
+function DemoCalendar({services,assignments,ministries:scope,members,month,setMonth,onAdd,onGenerate,role}){
  const [newDate,setNewDate]=useState(''),[newHour,setNewHour]=useState('20:00');
- const permitted=new Set(scope.map(m=>m.id));
+ const [selected,setSelected]=useState(null),[newCult,setNewCult]=useState(false),[filter,setFilter]=useState('all');
+ const ids=new Set(scope.map(m=>m.id));
  const monthly=services.filter(s=>monthKey(s.starts_at)===month).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
- const active=assignments.filter(a=>monthly.some(s=>s.id===a.service_id)&&permitted.has(a.ministry_id)&&isActive(a));
- const total=monthly.reduce((sum,s)=>sum+scope.reduce((a,m)=>a+(functions.some(f=>f.ministry_id===m.id)?functions.filter(f=>f.ministry_id===m.id).reduce((n,f)=>n+f.min_people,0):m.min_people),0),0);
+ const active=assignments.filter(a=>monthly.some(s=>s.id===a.service_id)&&ids.has(a.ministry_id)&&isActive(a));
+ const allRequired=monthly.filter(s=>s.status!=='cancelled').length*scope.reduce((a,m)=>a+minimumForMinistry(m,functions),0);
+ const confirmed=active.filter(a=>['confirmed','completed'].includes(a.state)).length;
+ const changeMonth=(dir)=>{const [year,mm]=month.split('-').map(Number),d=new Date(year,mm-1+dir,1);setMonth(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'))};
+ const visible=monthly.filter(s=>{
+  const rows=assignments.filter(a=>a.service_id===s.id&&ids.has(a.ministry_id));
+  const filled=rows.filter(isActive).length;
+  const required=scope.reduce((n,m)=>n+minimumForMinistry(m,functions),0);
+  return filter==='all'||(filter==='vacancies'&&filled<required)||(filter==='pending'&&rows.some(a=>a.state==='pending'));
+ });
  return <>
-  <PageHead eyebrow="PLANEJAMENTO" title="Cultos e escalas" description="Calendário e convocações fictícias. As ações modificam apenas a sua sessão de demonstração."
-   action={<Btn icon={Send} onClick={onGenerate}>Preencher vagas de teste</Btn>}/>
-  <div className="simple-inline-status"><CalendarDays size={17}/><strong>{monthly.length} cultos neste mês</strong><span>{active.length} de {total} posições preenchidas</span></div>
-  <Panel title="Agenda de cultos" subtitle={monthLabel(month)}>
-   <div className="table-scroll"><table className="data-table"><thead><tr><th>Culto</th><th>Data</th><th>Convocados</th><th>Confirmados</th><th>Status</th></tr></thead><tbody>{monthly.map(s=>{
-    const rows=assignments.filter(a=>a.service_id===s.id&&permitted.has(a.ministry_id));
-    return <tr key={s.id}><td><strong>{s.title}</strong></td><td>{dateFmt(s.starts_at)}</td><td>{rows.filter(isActive).length}</td><td>{rows.filter(a=>a.state==='confirmed'||a.state==='completed').length}</td><td><Badge tone={s.status==='published'?'green':s.status==='completed'?'purple':'amber'}>{s.status==='published'?'Publicado':s.status==='completed'?'Concluído':'Rascunho'}</Badge></td></tr>;
-   })}</tbody></table></div>
-  </Panel>
-  {role==='pastor'&&<Panel title="Criar culto de teste" subtitle="Apenas na sessão simulada"><div className="dashboard-grid" style={{alignItems:'end'}}>
-    <div className="col-4"><label>Dia</label><input type="date" value={newDate} onChange={e=>setNewDate(e.target.value)}/></div>
-    <div className="col-4"><label>Início</label><input type="time" value={newHour} onChange={e=>setNewHour(e.target.value)}/></div>
-    <div className="col-4"><Btn className="w-full" disabled={!newDate} icon={Plus} onClick={()=>{onAdd(newDate,newHour);setNewDate('')}}>Adicionar culto</Btn></div>
-   </div></Panel>}
+  <div className="sc-hero">
+   <div className="sc-hero-copy"><div className="eyebrow">ESCALAS DA DEMONSTRAÇÃO</div><h1>Escalas dos cultos</h1><p>Confira a equipe de cada culto e acompanhe as confirmações de forma simples.</p>
+    <div className="sc-hero-stats"><span><CalendarDays size={15}/>{monthly.length} cultos</span><span><CheckCheck size={15}/>{confirmed} confirmados</span><span><UsersRound size={15}/>{Math.max(0,allRequired-active.length)} vagas</span></div>
+   </div>
+   <div className="sc-hero-buttons">{role==='pastor'&&<Btn icon={Plus} onClick={()=>setNewCult(true)}>Novo culto</Btn>}<Btn icon={Send} variant="secondary" onClick={onGenerate}>Gerar escala</Btn></div>
+  </div>
+  <div className="sc-toolbar"><div className="sc-month-nav"><button onClick={()=>changeMonth(-1)} aria-label="Mês anterior">‹</button><strong>{monthLabel(month)}</strong><button onClick={()=>changeMonth(1)} aria-label="Próximo mês">›</button></div>
+   <div className="sc-filters" role="group" aria-label="Filtrar cultos">{[['all','Todos os cultos'],['vacancies','Com vagas'],['pending','Aguardando respostas']].map(([id,label])=><button key={id} className={filter===id?'current':''} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label}</button>)}</div></div>
+  {visible.length>0?<div className="sc-cards">{visible.map(s=><ScheduleCard key={s.id} service={s} assignments={assignments.filter(a=>a.service_id===s.id&&ids.has(a.ministry_id))} ministries={scope} functions={functions} members={members} onOpen={setSelected}/>)}</div>:
+  <div className="sc-empty"><Empty icon={CalendarDays} title="Nenhum culto neste filtro" subtitle="Escolha outro mês ou visualize todos os cultos." action={<Btn variant="secondary" onClick={()=>setFilter('all')}>Mostrar todos</Btn>}/></div>}
+  {selected&&<Modal title={selected.title} onClose={()=>setSelected(null)} footer={<Btn onClick={()=>setSelected(null)}>Concluir</Btn>}>
+   <div className="sc-modal-subtitle"><CalendarDays size={16}/>{dateFmt(selected.starts_at)}</div>
+   {scope.map(m=>{const team=assignments.filter(a=>a.service_id===selected.id&&a.ministry_id===m.id);const count=team.filter(isActive).length;
+    return <details className="sc-team-group" key={m.id} open={m.slug==='louvor'?true:undefined}>
+     <summary><strong>{m.name}</strong><span>{count}/{minimumForMinistry(m,functions)} escalados</span></summary>
+     {team.length===0?<p>Equipe ainda sem convocações.</p>:team.map(a=><div className="sc-team-person" key={a.id}><Avatar name={members.find(p=>p.id===a.profile_id)?.full_name||'Voluntário'}/><div><b>{members.find(p=>p.id===a.profile_id)?.full_name||'Voluntário'}</b><small>{functions.find(f=>f.id===a.function_id)?.name||'Equipe'}</small></div><Badge tone={a.state==='confirmed'||a.state==='completed'?'green':a.state==='pending'?'amber':'rose'}>{a.state==='pending'?'Pendente':a.state==='unavailable'?'Indisponível':'Confirmado'}</Badge></div>)}
+    </details>;
+   })}
+  </Modal>}
+  {newCult&&role==='pastor'&&<Modal title="Novo culto de teste" onClose={()=>setNewCult(false)} footer={<><Btn variant="secondary" onClick={()=>setNewCult(false)}>Cancelar</Btn><Btn disabled={!newDate} icon={Plus} onClick={()=>{onAdd(newDate,newHour);setNewCult(false);setNewDate('')}}>Criar culto</Btn></>}>
+   <div className="fields"><div><label>Data do culto</label><input type="date" value={newDate} onChange={e=>setNewDate(e.target.value)}/></div><div><label>Hora de início</label><input type="time" value={newHour} onChange={e=>setNewHour(e.target.value)}/></div></div>
+  </Modal>}
  </>;
 }
 function DemoPeople({people,ministries:scope,onApprove}){
@@ -184,7 +202,7 @@ export default function DemoPortal(){
  const rendered=()=>{
   if(section==='whatsapp'&&role==='pastor')return <WhatsAppSettings demo/>;
   if(section==='dashboard'&&role!=='volunteer')return <Dashboard role={role} profile={user} ministries={scope} functions={functions} services={services} assignments={visibleAssignments} members={visibleMembers} month={month} setMonth={setMonth} onNavigate={navigate} selectedMinistry={selectedMinistry} setSelectedMinistry={setSelectedMinistry}/>;
-  if(section==='escalas'&&role!=='volunteer')return <DemoCalendar role={role} ministries={scope} services={services} assignments={visibleAssignments} month={month} onAdd={addCult} onGenerate={generate}/>;
+  if(section==='escalas'&&role!=='volunteer')return <DemoCalendar role={role} ministries={scope} members={visibleMembers} services={services} assignments={visibleAssignments} month={month} setMonth={setMonth} onAdd={addCult} onGenerate={generate}/>;
   if(section==='equipe'&&role!=='volunteer')return <DemoPeople people={visibleMembers} ministries={scope} onApprove={approve}/>;
   if(section==='lideres'&&role==='pastor')return <><PageHead eyebrow="GESTÃO DE LIDERANÇA" title="Líderes de teste" description="Permissões demonstrativas separadas por ministério."/><Panel title="Liderança dos ministérios"><div className="demo-list">{users.filter(x=>x.kind==='leader').map(p=><div className="demo-listrow" key={p.id}><div><b>{p.full_name}</b><small>{p.email}</small></div><Badge tone="purple">{ministries.find(m=>m.slug===p.ministry)?.name}</Badge></div>)}</div></Panel></>;
   if(section==='ministerios'&&role!=='volunteer')return <><PageHead eyebrow="ÁREAS DE SERVIÇO" title="Ministérios" description="Configuração demonstrativa dos requisitos de cada culto."/><div className="demo-ministry-grid">{scope.map(m=><Panel key={m.id} title={m.name} subtitle={m.min_people+' posições por culto'}><p className="tiny-label">Chegada: {m.arrival_minutes} minutos antes • Saída: {m.departure_minutes} minutos depois</p><div className="demo-list">{functions.filter(f=>f.ministry_id===m.id).map(f=><div className="demo-listrow" key={f.id}><b>{f.name}</b><Badge tone="blue">{f.min_people} vaga(s)</Badge></div>)}</div></Panel>)}</div></>;
