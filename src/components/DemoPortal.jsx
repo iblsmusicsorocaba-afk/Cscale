@@ -197,14 +197,26 @@ export default function DemoPortal(){
   return <DemoVolunteer key={userId} person={user} services={services} assignments={assignments} functions={functions} people={users} onConfirm={finalize} month={month}/>;
  };
  return <AppShell role={role} profile={user} section={section} setSection={navigate} pending={pending} signOut={()=>window.location.assign('/')}>
-  <div className="demo-switch-panel">
-   <div><span className="demo-indicator">DEMONSTRAÇÃO INTERATIVA</span><div className="demo-switch-title">Teste todas as visões sem afetar a igreja</div><p>73 pessoas fictícias, cultos e respostas simulados. As ações não alteram o Supabase real.</p></div>
-   <div className="demo-switch-actions"><label>Visualizar como</label><select value={userId} onChange={e=>changeUser(e.target.value)} aria-label="Selecionar usuário de teste">
-    <optgroup label="Pastor">{users.filter(x=>x.kind==='pastor').map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</optgroup>
-    <optgroup label="Líderes">{users.filter(x=>x.kind==='leader').map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</optgroup>
-    {Object.entries(Object.groupBy?Object.groupBy(users.filter(x=>x.kind==='volunteer'),u=>u.ministry):Object.fromEntries([...new Set(users.filter(x=>x.kind==='volunteer').map(x=>x.ministry))].map(k=>[k,users.filter(x=>x.ministry===k)]))).map(([name,people])=><optgroup key={name} label={ministries.find(m=>m.slug===name)?.name||name}>{people.map(p=><option key={p.id} value={p.id}>{p.full_name} • {p.role||'Equipe'}</option>)}</optgroup>)}
-   </select><div className="actions"><Btn icon={RotateCcw} variant="secondary" small onClick={reset}>Reiniciar teste</Btn><Btn icon={Download} variant="secondary" small onClick={()=>csvDownload(users)}>73 usuários CSV</Btn></div></div>
+  <div className="demo-simple-bar">
+    <div><span className="demo-indicator">MODO DEMONSTRAÇÃO</span><h2>Testar como:</h2><p>Escolha um perfil para visualizar o sistema. Tudo aqui é fictício.</p></div>
+    <div className="demo-role-pills" role="group" aria-label="Escolher um perfil de teste">
+      {[
+        ['pastor@cscale-demo.test','Pastor'],
+        ['lider.louvor@cscale-demo.test','Líder do louvor'],
+        ['louvor01@cscale-demo.test','Baterista'],
+        ['louvor06@cscale-demo.test','Cantor']
+      ].map(([id,label])=><button type="button" key={id} className={'demo-role-pill '+(userId===id?'chosen':'')} aria-pressed={userId===id} onClick={()=>changeUser(id)}>{label}</button>)}
+    </div>
   </div>
+  <details className="demo-more-personas"><summary>Outros perfis de teste e ferramentas <span>({users.length} pessoas)</span></summary>
+   <div className="demo-more-content"><label htmlFor="demo-persona-picker">Selecionar qualquer voluntário</label>
+    <select id="demo-persona-picker" value={userId} onChange={e=>changeUser(e.target.value)}>
+      <optgroup label="Pastores e líderes">{users.filter(x=>x.kind!=='volunteer').map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</optgroup>
+      <optgroup label="Voluntários">{users.filter(x=>x.kind==='volunteer').map(p=><option key={p.id} value={p.id}>{p.full_name} — {p.role||p.ministry}</option>)}</optgroup>
+    </select>
+    <div className="actions"><Btn icon={RotateCcw} variant="secondary" small onClick={reset}>Reiniciar testes</Btn><Btn icon={Download} variant="secondary" small onClick={()=>csvDownload(users)}>Exportar lista</Btn></div>
+   </div>
+  </details>
   {message&&<div role="status" className="alert"><CheckCheck size={16}/>{message}<button className="circle-btn" onClick={()=>setMessage('')} aria-label="Fechar aviso">×</button></div>}
   {rendered()}
  </AppShell>;
