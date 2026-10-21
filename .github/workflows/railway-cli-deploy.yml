@@ -1,0 +1,38 @@
+name: C Scale - Deploy direto pelo Railway CLI
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/railway-cli-deploy.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir se ha credencial do Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ] && [ -z "$RAILWAY_API_TOKEN" ]; then
+            echo "::error::Railway CLI nao pode autenticar: configure RAILWAY_TOKEN ou RAILWAY_API_TOKEN nos secrets do GitHub Actions."
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar Railway CLI
+        run: npm install --global @railway/cli
+      - name: Publicar no servico web existente (sem recriar o projeto)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          railway up --ci --detach \
+            --project a91588be-ba0a-49f3-83f9-6cba957a97cb \
+            --environment 67ef90a5-ad67-47c2-9653-3ab646e27799 \
+            --service aba5e9ad-f9bf-44e0-ad4f-aa200e8ea56e
