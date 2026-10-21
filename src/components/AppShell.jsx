@@ -22,7 +22,7 @@ export function AppShell({profile,role='volunteer',section,setSection,pending=0,
  const choose=s=>{setSection(s);setOpen(false)};
  const today=dateFmt(new Date(),{weekday:'long',day:'2-digit',month:'long'});
  const isDemo=profile.church_id==='22222222-2222-4222-8222-222222222222';
- return <div className="app">
+ return <div className="app simplified-shell">
   <div className={'nav-overlay '+(open?'open':'')} onClick={()=>setOpen(false)}/>
   <aside className={'sidebar '+(open?'open':'')}>
     <div className="sidebar-header"><div className="logo-mark"><Church size={24}/></div><div><div className="logo-title">C Scale<span style={{color:'#a39dff'}}>.</span></div><div className="logo-sub">CHURCH MANAGEMENT</div></div><button className="circle-btn mobile-menu" onClick={()=>setOpen(false)} aria-label="Fechar"><X size={17}/></button></div>
