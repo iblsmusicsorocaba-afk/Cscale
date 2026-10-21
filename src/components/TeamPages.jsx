@@ -60,22 +60,53 @@ export function MinistriesPage({role,client,ministries,functions,busy,onRun}){
  </>;
 }
 export function LeadersPage({client,members,ministries,allLeaders,leaderScopes,busy,onRun}){
- const [person,setPerson]=useState(''),[ministry,setMinistry]=useState('');
- const rows=allLeaders.filter(l=>l.role==='leader').map(l=>({...l,profile:members.find(p=>p.id===l.profile_id),scopes:leaderScopes.filter(s=>s.profile_id===l.profile_id)}));
- const appoint=async(e)=>{e.preventDefault();if(!person||!ministry)return;
- await onRun(async()=>{
-  const profile=members.find(p=>p.id===person);if(!profile?.approved)throw Error('Aprove o cadastro desse voluntário antes de torná-lo líder.');
-  const existing=allLeaders.find(l=>l.profile_id===person);
-  if(existing?.role==='pastor')throw Error('O pastor já possui acesso global; não é necessário atribuir liderança.');
-  const a=await client.from('managers').upsert({profile_id:person,role:'leader'},{onConflict:'profile_id'});if(a.error)throw a.error;
-  const b=await client.from('leader_ministries').upsert({profile_id:person,ministry_id:ministry},{onConflict:'profile_id,ministry_id'});if(b.error)throw b.error;
- },'Liderança atribuída ao ministério com sucesso.')};
- const remove=async(scope)=>await onRun(async()=>{const r=await client.from('leader_ministries').delete().eq('profile_id',scope.profile_id).eq('ministry_id',scope.ministry_id);if(r.error)throw r.error},'Vínculo de liderança removido.');
+ const [person,setPerson]=useState(''),[ministry,setMinistry]=useState(''),[kind,setKind]=useState('leader');
+ const leaders=allLeaders.filter(l=>l.role==='leader').map(l=>({...l,profile:members.find(p=>p.id===l.profile_id),scopes:leaderScopes.filter(s=>s.profile_id===l.profile_id)}));
+ const pastors=allLeaders.filter(l=>l.role==='pastor').map(l=>({...l,profile:members.find(p=>p.id===l.profile_id)}));
+ const appoint=async e=>{
+  e.preventDefault();if(!person||(kind==='leader'&&!ministry))return;
+  if(kind==='pastor'&&!window.confirm('Conceder acesso de pastor? Esta pessoa poderá administrar todos os ministérios e permissões da igreja.'))return;
+  await onRun(async()=>{
+    const profile=members.find(p=>p.id===person);
+    if(!profile?.approved)throw Error('O cadastro precisa ser aprovado antes de assumir uma função administrativa.');
+    const current=allLeaders.find(l=>l.profile_id===person);
+    if(current?.role==='pastor')throw Error('Este perfil já possui acesso pastoral completo.');
+    const a=await client.from('managers').upsert({profile_id:person,role:kind},{onConflict:'profile_id'});
+    if(a.error)throw a.error;
+    if(kind==='leader'){
+      const b=await client.from('leader_ministries').upsert({profile_id:person,ministry_id:ministry},{onConflict:'profile_id,ministry_id'});
+      if(b.error)throw b.error;
+    }
+    setPerson('');
+   },kind==='pastor'?'Novo pastor autorizado com visão de toda a igreja.':'Liderança atribuída ao ministério.');
+ };
+ const remove=async scope=>await onRun(async()=>{
+   const r=await client.from('leader_ministries').delete().eq('profile_id',scope.profile_id).eq('ministry_id',scope.ministry_id);
+   if(r.error)throw r.error;
+ },'Permissão do ministério removida.');
  return <>
-  <PageHead eyebrow="PASTOR • ADMINISTRAÇÃO" title="Gestão de líderes" description="Defina quais equipes cada líder pode administrar. Acesso restrito aos respectivos ministérios." action={<Badge tone="purple"><ShieldCheck size={13}/> Controle de acesso</Badge>}/>
-  <div className="dashboard-grid mb-3"><div className="col-4"><Metric icon={UserRoundCheck} label="Líderes cadastrados" value={rows.length} caption="Pessoas com função de liderança" tone="purple"/></div><div className="col-4"><Metric icon={Layers3} label="Ministérios com líder" value={new Set(leaderScopes.map(x=>x.ministry_id)).size} caption={'de '+ministries.length+' ministérios da igreja'} tone="blue"/></div><div className="col-4"><Metric icon={ShieldCheck} label="Permissões individuais" value={leaderScopes.length} caption="Vínculos entre líderes e equipes" tone="green"/></div></div>
-  <div className="dashboard-grid"><div className="col-5"><Panel title="Conceder acesso de liderança" subtitle="Escolha um voluntário aprovado e seu ministério."><form onSubmit={appoint} className="stack"><div><label>Voluntário</label><select required value={person} onChange={e=>setPerson(e.target.value)}><option value="">Selecione uma pessoa</option>{members.filter(p=>p.approved&&!allLeaders.some(l=>l.profile_id===p.id&&l.role==='pastor')).sort((a,b)=>a.full_name.localeCompare(b.full_name)).map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</select></div><div><label>Ministério autorizado</label><select required value={ministry} onChange={e=>setMinistry(e.target.value)}><option value="">Selecione um ministério</option>{ministries.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></div><div className="alert info"><Info size={17}/>O líder verá apenas pessoas e escalas dos ministérios atribuídos, inclusive nos dashboards.</div><Btn type="submit" icon={Plus} disabled={busy||!person||!ministry}>Atribuir liderança</Btn></form></Panel></div>
-   <div className="col-7"><Panel title="Lideranças atuais" subtitle="Pessoas responsáveis por cada equipe">{rows.length===0?<Empty icon={ShieldCheck} title="Nenhum líder atribuído" subtitle="Atribua o primeiro líder usando o formulário ao lado."/>:<div className="stack">{rows.map(r=><div className="volunteer-card" key={r.profile_id}><div className="row mb-2"><Avatar name={r.profile?.full_name||'Líder'}/><div><strong className="person-name">{r.profile?.full_name||'Líder'}</strong><div className="tiny-label">{r.scopes.length} ministérios autorizados</div></div></div><div className="stack" style={{gap:8}}>{r.scopes.map(s=><div className="row spread mini-summary" key={s.ministry_id}><Badge tone="purple">{ministries.find(m=>m.id===s.ministry_id)?.name||'Ministério'}</Badge><Btn small variant="danger" disabled={busy} onClick={()=>remove(s)}>Remover acesso</Btn></div>)}</div></div>)}</div>}</Panel></div>
+  <PageHead eyebrow="PASTOR • PERMISSÕES" title="Gestão de líderes" description="Pastores visualizam tudo. Líderes possuem acesso exclusivo aos ministérios autorizados." action={<Badge tone="purple"><ShieldCheck size={13}/> Gestão de acessos</Badge>}/>
+  <div className="dashboard-grid mb-3">
+   <div className="col-4"><Metric icon={ShieldCheck} label="Pastores autorizados" value={pastors.length} caption="Visão integral da igreja" tone="purple"/></div>
+   <div className="col-4"><Metric icon={UserRoundCheck} label="Líderes cadastrados" value={leaders.length} caption="Gestores por ministério" tone="blue"/></div>
+   <div className="col-4"><Metric icon={Layers3} label="Ministérios com líder" value={new Set(leaderScopes.filter(s=>leaders.some(l=>l.profile_id===s.profile_id)).map(s=>s.ministry_id)).size} caption={'de '+ministries.length+' ministérios'} tone="green"/></div>
+  </div>
+  <div className="dashboard-grid">
+   <div className="col-5"><Panel title="Conceder acesso" subtitle="Defina o nível de permissão de cada pessoa.">
+    <form onSubmit={appoint} className="stack">
+     <div><label>Tipo de acesso</label><select value={kind} onChange={e=>setKind(e.target.value)}><option value="leader">Líder de ministério</option><option value="pastor">Pastor — acesso a toda a igreja</option></select></div>
+     <div><label>Voluntário aprovado</label><select required value={person} onChange={e=>setPerson(e.target.value)}><option value="">Escolher pessoa</option>{members.filter(p=>p.approved&&!pastors.some(l=>l.profile_id===p.id)).sort((a,b)=>a.full_name.localeCompare(b.full_name)).map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</select></div>
+     {kind==='leader'&&<div><label>Ministério sob responsabilidade</label><select required value={ministry} onChange={e=>setMinistry(e.target.value)}><option value="">Selecione um ministério</option>{ministries.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></div>}
+     <div className="alert info"><Info size={17}/><span>{kind==='pastor'?'O pastor terá controle e dashboard consolidado de todos os ministérios e voluntários.':'O líder poderá acompanhar e organizar apenas os ministérios que você autorizar.'}</span></div>
+     <Btn type="submit" icon={Plus} disabled={busy||!person||(kind==='leader'&&!ministry)}>Conceder acesso</Btn>
+    </form>
+   </Panel></div>
+   <div className="col-7"><Panel title="Pessoas com acesso de liderança" subtitle="Responsabilidades e permissões atualmente ativas">
+    {pastors.length===0&&leaders.length===0?<Empty icon={ShieldCheck} title="Sem liderança cadastrada" subtitle="Cadastre o primeiro gestor no formulário ao lado."/>:<div className="stack">
+     {pastors.map(p=><div key={p.profile_id} className="mini-summary row spread"><div className="row"><Avatar name={p.profile?.full_name||'Pastor'}/><div><strong>{p.profile?.full_name||'Pastor'}</strong><div className="tiny-label">Acesso completo</div></div></div><Badge tone="green">Pastor · Global</Badge></div>)}
+     {leaders.map(l=><div key={l.profile_id} className="volunteer-card"><div className="row spread mb-2"><div className="row"><Avatar name={l.profile?.full_name||'Líder'}/><div><strong>{l.profile?.full_name||'Líder'}</strong><div className="tiny-label">{l.scopes.length} ministérios autorizados</div></div></div><Badge tone="purple">Líder</Badge></div><div className="stack" style={{gap:7}}>{l.scopes.length===0?<small className="muted">Sem ministério atribuído.</small>:l.scopes.map(s=><div key={s.ministry_id} className="mini-summary row spread"><span className="inline-muted">{ministries.find(m=>m.id===s.ministry_id)?.name||'Ministério'}</span><Btn small variant="danger" disabled={busy} onClick={()=>remove(s)}>Remover</Btn></div>)}</div></div>)}
+    </div>}
+   </Panel></div>
   </div>
  </>;
 }
