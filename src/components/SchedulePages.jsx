@@ -81,11 +81,29 @@ export function SchedulePages({client,role,profile,ministries,functions,services
  {creating&&isPastor&&<Modal title="Cadastrar novo culto" onClose={()=>setCreating(false)} footer={<><Btn variant="secondary" onClick={()=>setCreating(false)}>Cancelar</Btn><Btn type="submit" disabled={busy} icon={CalendarCheck2} onClick={()=>document.getElementById('create-service-form')?.requestSubmit()}>Criar culto</Btn></>}>
  <form id="create-service-form" onSubmit={create}><div className="stack"><div><label>Nome do culto</label><input required value={form.title} onChange={e=>setForm(v=>({...v,title:e.target.value}))}/></div><div className="fields"><div><label>Data e hora de início</label><input required type="datetime-local" value={form.start} onChange={e=>setForm(v=>({...v,start:e.target.value}))}/></div><div><label>Data e hora de término</label><input required type="datetime-local" value={form.end} onChange={e=>setForm(v=>({...v,end:e.target.value}))}/></div></div><div><label>Recorrência</label><select value={form.repeat} onChange={e=>setForm(v=>({...v,repeat:Number(e.target.value)}))}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n===1?'Somente este culto':n+' semanas consecutivas'}</option>)}</select></div></div></form>
  </Modal>}
- {openService&&<Modal title={openService.title} onClose={()=>setOpenService(null)} footer={<><Btn variant="secondary" onClick={()=>setOpenService(null)}>Fechar</Btn>{isPastor&&openService.status==='draft'&&<Btn icon={Send} disabled={busy} onClick={()=>changeStatus(openService,'published')}>Publicar culto</Btn>}{isPastor&&['draft','published'].includes(openService.status)&&<Btn variant="danger" disabled={busy} onClick={()=>changeStatus(openService,'cancelled')}>Cancelar culto</Btn>}</>}>
- <div className="row spread mb-2"><div className="stack" style={{gap:2}}><strong>{dateFmt(openService.starts_at)}</strong><span className="inline-muted">Encerramento: {dateFmt(openService.ends_at)}</span></div><Badge tone={openService.status==='published'?'green':'amber'}>{openService.status}</Badge></div>
- <div className="divider"/>
- <h3 style={{marginBottom:12}}>Equipe convocada</h3>
- {ministries.map(m=>{const team=assignments.filter(a=>a.service_id===openService.id&&a.ministry_id===m.id);return <div className="mb-2" key={m.id}><div className="row spread mb-2"><strong>{m.name}</strong><Badge>{team.filter(a=>['pending','confirmed','completed'].includes(a.state)).length} convites</Badge></div>{team.length===0?<small className="muted">Nenhuma convocação para esta equipe.</small>:team.map(a=><div className="mini-summary mb-2" key={a.id}><Avatar name={members.find(p=>p.id===a.profile_id)?.full_name||'Voluntário'}/><div style={{flex:1}}><strong className="person-name">{members.find(p=>p.id===a.profile_id)?.full_name||'Voluntário'}</strong><div className="tiny-label">{functions.find(f=>f.id===a.function_id)?.name||'Equipe geral'}</div></div><Badge tone={a.state==='confirmed'?'green':a.state==='pending'?'amber':'rose'}>{a.state==='confirmed'?'Confirmado':a.state==='pending'?'Pendente':'Indisponível'}</Badge></div>)}</div>})}
+ {openService&&<Modal title={openService.title} onClose={()=>setOpenService(null)} footer={<><Btn variant="secondary" onClick={()=>setOpenService(null)}>Fechar</Btn>{isPastor&&openService.status==='draft'&&<Btn icon={Send} disabled={busy} onClick={()=>changeStatus(openService,'published')}>Publicar culto</Btn>}{isPastor&&['draft','published'].includes(openService.status)&&<Btn variant="danger" disabled={busy} onClick={()=>changeStatus(openService,'cancelled')}>Cancelar</Btn>}</>}>
+  <div className="sc-modal-subtitle"><CalendarDays size={16}/><span>{dateFmt(openService.starts_at)} – {dateFmt(openService.ends_at,{hour:'2-digit',minute:'2-digit'})}</span></div>
+  <div className="sc-modal-summary">{(()=>{
+   const entries=assignments.filter(a=>a.service_id===openService.id&&ministries.some(m=>m.id===a.ministry_id));
+   const accepted=entries.filter(a=>['confirmed','completed'].includes(a.state)).length;
+   const pending=entries.filter(a=>a.state==='pending').length;
+   const needed=ministries.reduce((n,m)=>n+minimumForMinistry(m,functions),0);
+   return <><div><CheckCheck size={17}/><b>{accepted}</b><small>Confirmados</small></div><div><Clock3 size={17}/><b>{pending}</b><small>Aguardando</small></div><div><UsersRound size={17}/><b>{Math.max(0,needed-accepted-pending)}</b><small>Vagas livres</small></div></>;
+  })()}</div>
+  <p className="sc-group-help">Toque no ministério para ver as pessoas escaladas.</p>
+  {ministries.map(m=>{
+   const entries=assignments.filter(a=>a.service_id===openService.id&&a.ministry_id===m.id);
+   const active=entries.filter(a=>['pending','confirmed','completed'].includes(a.state));
+   const needed=minimumForMinistry(m,functions);
+   return <details className="sc-team-group" key={m.id} open={ministries.length===1?true:undefined}>
+    <summary><strong>{m.name}</strong><span>{active.length}/{needed} pessoas escaladas</span></summary>
+    {entries.length===0?<p>Esse ministério ainda não tem pessoas escaladas neste culto.</p>:entries.map(a=>{
+     const person=members.find(p=>p.id===a.profile_id);
+     const status=['confirmed','completed'].includes(a.state)?'Confirmado':a.state==='pending'?'Aguardando':a.state==='unavailable'?'Não disponível':'Cancelado';
+     return <div className="sc-team-person" key={a.id}><Avatar name={person?.full_name||'Voluntário'}/><div><b>{person?.full_name||'Voluntário'}</b><small>{functions.find(f=>f.id===a.function_id)?.name||'Equipe geral'}</small></div><Badge tone={['confirmed','completed'].includes(a.state)?'green':a.state==='pending'?'amber':'rose'}>{status}</Badge></div>
+    })}
+   </details>;
+  })}
  </Modal>}
  </>;
 }
