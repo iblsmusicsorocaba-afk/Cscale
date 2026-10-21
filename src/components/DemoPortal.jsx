@@ -91,11 +91,7 @@ function DemoCalendar({services,assignments,ministries:scope,month,onAdd,onGener
  return <>
   <PageHead eyebrow="PLANEJAMENTO" title="Cultos e escalas" description="Calendário e convocações fictícias. As ações modificam apenas a sua sessão de demonstração."
    action={<Btn icon={Send} onClick={onGenerate}>Preencher vagas de teste</Btn>}/>
-  <div className="dashboard-grid mb-3">
-   <div className="col-4"><Metric icon={CalendarDays} label="Cultos no mês" value={monthly.length} caption="Agendados neste mês" tone="purple"/></div>
-   <div className="col-4"><Metric icon={UsersRound} label="Posições preenchidas" value={active.length+'/'+total} caption="Convites ativos e confirmados" tone="blue"/></div>
-   <div className="col-4"><Metric icon={CheckCheck} label="Confirmações" value={active.filter(a=>a.state==='confirmed').length} caption="Disponibilidade já aceita" tone="green"/></div>
-  </div>
+  <div className="simple-inline-status"><CalendarDays size={17}/><strong>{monthly.length} cultos neste mês</strong><span>{active.length} de {total} posições preenchidas</span></div>
   <Panel title="Agenda de cultos" subtitle={monthLabel(month)}>
    <div className="table-scroll"><table className="data-table"><thead><tr><th>Culto</th><th>Data</th><th>Convocados</th><th>Confirmados</th><th>Status</th></tr></thead><tbody>{monthly.map(s=>{
     const rows=assignments.filter(a=>a.service_id===s.id&&permitted.has(a.ministry_id));
@@ -114,9 +110,7 @@ function DemoPeople({people,ministries:scope,onApprove}){
  const visible=people.filter(p=>p.full_name.toLowerCase().includes(search.toLowerCase())&&(!filter||p.ministry===filter));
  return <><PageHead eyebrow="GESTÃO DE PESSOAS" title="Equipe e voluntários" description="Perfis fictícios de demonstração para avaliar o cadastro e as aprovações."
  action={<Btn icon={Download} variant="secondary" onClick={()=>csvDownload(people)}>Lista CSV</Btn>}/>
- <div className="dashboard-grid mb-3"><div className="col-4"><Metric icon={UsersRound} label="Voluntários visíveis" value={people.length} caption="Perfis de demonstração" tone="blue"/></div>
- <div className="col-4"><Metric icon={ShieldCheck} label="Funções aprovadas" value={people.filter(p=>p.role_approved).length} caption="Habilitados para servir" tone="green"/></div>
- <div className="col-4"><Metric icon={AlertTriangle} label="Aguardando revisão" value={people.filter(p=>!p.role_approved).length} caption="Simule a aprovação" tone="orange"/></div></div>
+ <div className="simple-inline-status"><UsersRound size={17}/><strong>{people.length} pessoas</strong><span>{people.filter(p=>!p.role_approved).length} funções aguardando revisão</span></div>
  <Panel title="Diretório de pessoas" subtitle="Todos os dados são inventados">
  <div className="filter-strip mb-2"><input placeholder="Buscar voluntário" value={search} onChange={e=>setSearch(e.target.value)}/><select value={filter} onChange={e=>setFilter(e.target.value)} aria-label="Filtrar ministério"><option value="">Todas as áreas</option>{scope.map(m=><option key={m.id} value={m.slug}>{m.name}</option>)}</select></div>
  <div className="table-scroll"><table className="data-table"><thead><tr><th>Voluntário</th><th>Função</th><th>Acesso</th><th>Aprovação</th></tr></thead><tbody>{visible.map(p=><tr key={p.id}><td><div className="row"><Avatar name={p.full_name}/><div><strong>{p.full_name}</strong><div className="tiny-label">{p.email}</div></div></div></td><td>{p.role||scope.find(m=>m.slug===p.ministry)?.name||'Geral'}</td><td><Badge tone={p.kind==='pastor'?'purple':p.kind==='leader'?'blue':'green'}>{p.kind==='pastor'?'Pastor':p.kind==='leader'?'Líder':'Voluntário'}</Badge></td>
@@ -137,7 +131,7 @@ function DemoVolunteer({person,services,assignments,functions,people,onConfirm,m
   return <div className="demo-band"><strong><Music2 size={16}/> Formação confirmada do louvor</strong><div className="demo-band-grid">{names.map(({role,assigned})=><div key={role}><b>{role}</b><small>{assigned.length?assigned.join(', '):'Pendente'}</small></div>)}</div></div>;
  }
  return <><PageHead eyebrow="MEU SERVIÇO" title="Minhas escalas" description={'Bem-vindo, '+person.full_name+'. Veja seus cultos e responda às convocações fictícias.'}/>
- <div className="dashboard-grid mb-3"><div className="col-4"><Metric icon={CalendarDays} label="Minhas escalas" value={all.length} caption="Histórico e próximas datas" tone="purple"/></div><div className="col-4"><Metric icon={Clock3} label="Preciso responder" value={current.length} caption="Convites deste mês e próximos" tone="orange"/></div><div className="col-4"><Metric icon={CheckCheck} label="Confirmadas" value={confirmed.length} caption="Datas aceitas ou concluídas" tone="green"/></div></div>
+ <div className="simple-inline-status"><Clock3 size={17}/><strong>{current.length} para responder</strong><span>{confirmed.length} datas confirmadas</span></div>
  <Panel className="mb-3" title="Convocações aguardando resposta" subtitle="Selecione cada resposta e finalize tudo numa única revisão">
   {current.length===0?<Empty icon={CheckCheck} title="Tudo respondido" subtitle="Troque de usuário ou de mês para continuar testando."/>:<div className="stack">{current.map(a=><div className="demo-invite" key={a.id}><div className="row spread"><div><strong>{lookup(a.service_id)?.title}</strong><div className="tiny-label">{dateFmt(lookup(a.service_id)?.starts_at)}</div></div><Badge tone="amber">{functions.find(f=>f.id===a.function_id)?.name||'Equipe geral'}</Badge></div>{band(a)}
    <div className="actions"><Btn small variant={decisions[a.id]==='confirmed'?'':'secondary'} icon={CheckCheck} onClick={()=>setDecisions(v=>({...v,[a.id]:'confirmed'}))}>Confirmar</Btn><Btn small variant={decisions[a.id]==='unavailable'?'':'secondary'} onClick={()=>setDecisions(v=>({...v,[a.id]:'unavailable'}))}>Não disponível</Btn></div></div>)}
