@@ -2,6 +2,7 @@
 import React,{useMemo} from 'react';
 import {CalendarDays,UsersRound,ClipboardCheck,Clock3,TrendingUp,ChartNoAxesCombined,ArrowRight,CheckCheck,AlertTriangle,BarChart3,Church2,MousePointer2,Sparkles,ChevronDown} from 'lucide-react';
 import {Panel,Badge,Metric,Progress,Empty,PageHead,dateFmt,formatPercent,monthKey,monthLabel,Btn} from './ui';
+import {DashboardInsights} from './DashboardInsights';
 
 function monthsAround(today){
  const [year,mm]=today.split('-').map(Number);return Array.from({length:12},(_,i)=>{
@@ -90,6 +91,7 @@ export function Dashboard({role,profile,ministries,services,assignments,members,
     })}</tbody></table></div>}
    </Panel></div>
   </div>
+  <DashboardInsights role={role} ministries={ministries} functions={functions} services={services} assignments={assignments} members={members} month={month} selectedMinistry={selectedMinistry} onNavigate={onNavigate}/>
  </>;
 }
 function sumMin(mins,functions){
