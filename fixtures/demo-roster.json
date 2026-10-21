@@ -104,7 +104,7 @@
     "kind": "volunteer",
     "ministry": "louvor",
     "role": "Cantor",
-    "vocal_group": "feminina",
+    "vocal_group": "masculina",
     "approved": true,
     "role_approved": true,
     "limit": 4
@@ -115,7 +115,7 @@
     "kind": "volunteer",
     "ministry": "louvor",
     "role": "Cantor",
-    "vocal_group": "masculina",
+    "vocal_group": "feminina",
     "approved": true,
     "role_approved": true,
     "limit": 4
@@ -126,7 +126,7 @@
     "kind": "volunteer",
     "ministry": "louvor",
     "role": "Cantor",
-    "vocal_group": "feminina",
+    "vocal_group": "masculina",
     "approved": true,
     "role_approved": true,
     "limit": 4
@@ -137,7 +137,7 @@
     "kind": "volunteer",
     "ministry": "louvor",
     "role": "Cantor",
-    "vocal_group": "feminina",
+    "vocal_group": "masculina",
     "approved": true,
     "role_approved": true,
     "limit": 4
