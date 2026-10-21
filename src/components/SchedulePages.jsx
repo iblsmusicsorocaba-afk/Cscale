@@ -4,7 +4,7 @@ import {CalendarDays,Plus,Clock3,CheckCheck,UsersRound,Sparkles,LayoutGrid,List,
 import {Btn,Panel,Badge,PageHead,Metric,Progress,Empty,Modal,dateFmt,monthLabel,monthKey,dayNumber,shortMonth,Avatar} from './ui';
 import {draft} from '../lib/scheduler';
 const minDay=date=>Number(dateFmt(date,{day:'numeric'}));
-export function SchedulePages({client,role,ministries,functions,services,assignments,members,month,setMonth,onRun,busy}){
+export function SchedulePages({client,role,profile,ministries,functions,services,assignments,members,month,setMonth,onRun,busy}){
  const [mode,setMode]=useState('lista'),[creating,setCreating]=useState(false),[preview,setPreview]=useState(null),[openService,setOpenService]=useState(null);
  const [form,setForm]=useState({title:'Culto',start:'',end:'',repeat:1});
  const dateParts=month.split('-').map(Number);
@@ -21,7 +21,7 @@ export function SchedulePages({client,role,ministries,functions,services,assignm
  const next=()=>{const d=new Date(dateParts[0],dateParts[1],1);setMonth(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'))};
  const create=async e=>{e.preventDefault();await onRun(async()=>{
   if(!form.start||!form.end||new Date(form.end)<=new Date(form.start))throw Error('A data de término deve ser depois do início.');
-  const values=Array.from({length:Number(form.repeat)},(_,i)=>({church_id:'11111111-1111-4111-8111-111111111111',title:form.title||'Culto',starts_at:new Date(new Date(form.start).getTime()+i*7*86400000).toISOString(),ends_at:new Date(new Date(form.end).getTime()+i*7*86400000).toISOString(),status:'draft'}));
+  const values=Array.from({length:Number(form.repeat)},(_,i)=>({church_id:profile.church_id,title:form.title||'Culto',starts_at:new Date(new Date(form.start).getTime()+i*7*86400000).toISOString(),ends_at:new Date(new Date(form.end).getTime()+i*7*86400000).toISOString(),status:'draft'}));
   const {error}=await client.from('services').insert(values);if(error)throw error;setCreating(false);
  },'Cultos cadastrados com sucesso!')};
  const changeStatus=async(service,status)=>await onRun(async()=>{const {error}=await client.from('services').update({status}).eq('id',service.id);if(error)throw error;setOpenService(null)},status==='published'?'Culto publicado. Os convites estão disponíveis.':'Culto atualizado.');
