@@ -3,9 +3,10 @@ import React,{useMemo,useState} from 'react';
 import {CalendarDays,Plus,Clock3,CheckCheck,UsersRound,Sparkles,LayoutGrid,List,ChevronLeft,ChevronRight,Send,Info,AlertTriangle,CalendarCheck2,ShieldCheck} from 'lucide-react';
 import {Btn,Panel,Badge,PageHead,Metric,Progress,Empty,Modal,dateFmt,monthLabel,monthKey,dayNumber,shortMonth,Avatar} from './ui';
 import {draft} from '../lib/scheduler';
+import {ScheduleCard,minimumForMinistry} from './ScheduleCard';
 const minDay=date=>Number(dateFmt(date,{day:'numeric'}));
 export function SchedulePages({client,role,profile,ministries,functions,services,assignments,members,month,setMonth,onRun,busy}){
- const [mode,setMode]=useState('lista'),[creating,setCreating]=useState(false),[preview,setPreview]=useState(null),[openService,setOpenService]=useState(null);
+ const [mode,setMode]=useState('lista'),[filter,setFilter]=useState('all'),[creating,setCreating]=useState(false),[preview,setPreview]=useState(null),[openService,setOpenService]=useState(null);
  const [form,setForm]=useState({title:'Culto',start:'',end:'',repeat:1});
  const dateParts=month.split('-').map(Number);
  const isPastor=role==='pastor';
@@ -41,16 +42,35 @@ export function SchedulePages({client,role,profile,ministries,functions,services
   return [...Array(first).fill(null),...Array.from({length:last},(_,i)=>i+1)];
  },[month]);
  return <>
- <PageHead eyebrow={isPastor?'PLANEJAMENTO GERAL':'ESCALA DO MEU MINISTÉRIO'} title="Escalas e cultos" description={isPastor?'Planeje, revise e publique os cultos e escalas da igreja.':'Planeje as convocações e acompanhe sua equipe em cada culto.'} action={<div className="actions">{isPastor&&<Btn icon={Plus} onClick={()=>setCreating(true)}>Novo culto</Btn>}<Btn icon={Sparkles} variant="soft" onClick={generate}>Gerar escala</Btn></div>}/>
- <div className="simple-inline-status"><CalendarDays size={17}/><strong>{monthServices.filter(s=>s.status!=='cancelled').length} cultos neste mês</strong><span>{totalActive} de {totalNeeded} posições preenchidas · {totalConfirmed} confirmadas</span></div>
- <Panel className="mb-3" title="Calendário de cultos" subtitle="Visualize e acompanhe o mês" action={<div className="actions"><Btn small variant="secondary" icon={ChevronLeft} onClick={prev}/><strong style={{minWidth:115,textAlign:'center',textTransform:'capitalize',fontSize:12}}>{monthLabel(month)}</strong><Btn small variant="secondary" icon={ChevronRight} onClick={next}/><span style={{width:8}}/><Btn small variant={mode==='lista'?'soft':'secondary'} icon={List} onClick={()=>setMode('lista')}>Lista</Btn><Btn small variant={mode==='calendario'?'soft':'secondary'} icon={LayoutGrid} onClick={()=>setMode('calendario')}>Grade</Btn></div>}>
- {mode==='calendario'?<><div className="calendar-grid mb-2">{['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(x=><div className="tiny-label" style={{textAlign:'center',fontWeight:800}} key={x}>{x}</div>)}</div><div className="calendar-grid">{days.map((day,i)=><div key={i} className={'day-pill '+(day===new Date().getDate()&&month===monthKey(new Date())?'today':'')} style={{opacity:day===null?.35:1}}>{day!==null&&<><strong>{day}</strong>{monthServices.filter(s=>minDay(s.starts_at)===day).map(s=><div key={s.id} className="event" onClick={()=>setOpenService(s)} style={{cursor:'pointer'}}>{s.title}<br/>{dateFmt(s.starts_at,{hour:'2-digit',minute:'2-digit'})}</div>)}</>}</div>)}</div></>:
- monthServices.length===0?<Empty icon={CalendarDays} title="Ainda não há cultos neste mês" subtitle={isPastor?'Crie um culto para iniciar o planejamento da escala.':'Os cultos aparecerão após o pastor cadastrá-los.'} action={isPastor?<Btn onClick={()=>setCreating(true)} icon={Plus}>Criar culto</Btn>:null}/>:
- <div className="dashboard-grid">{monthServices.map(s=>{
-  const team=monthAssignments.filter(a=>a.service_id===s.id),active=team.filter(a=>['pending','confirmed','completed'].includes(a.state)),confirmed=team.filter(a=>['confirmed','completed'].includes(a.state));
-  return <div className="col-6" key={s.id}><div className="service-card"><div className="row spread"><div className="row"><div className="service-date"><strong>{dayNumber(s.starts_at)}</strong><small>{shortMonth(s.starts_at)}</small></div><div><h3>{s.title}</h3><div className="service-meta" style={{margin:'6px 0 0'}}><span><Clock3 size={13}/>{dateFmt(s.starts_at,{hour:'2-digit',minute:'2-digit'})} – {dateFmt(s.ends_at,{hour:'2-digit',minute:'2-digit'})}</span></div></div></div><Badge tone={s.status==='published'?'green':s.status==='cancelled'?'rose':'amber'}>{s.status==='published'?'Publicado':s.status==='cancelled'?'Cancelado':s.status==='completed'?'Concluído':'Rascunho'}</Badge></div><div className="divider" style={{margin:'15px 0 10px'}}/><div className="row spread"><small className="inline-muted">{active.length} convocações • {confirmed.length} confirmadas</small><Btn small variant="secondary" onClick={()=>setOpenService(s)}>Ver detalhes</Btn></div></div></div>
- })}</div>}
- </Panel>
+
+ <div className="sc-hero">
+  <div className="sc-hero-copy"><div className="eyebrow">PLANEJAMENTO DOS MINISTÉRIOS</div>
+   <h1>Escalas dos cultos</h1>
+   <p>Veja quem vai servir, o que falta confirmar e quais equipes precisam de ajuda.</p>
+   <div className="sc-hero-stats"><span><CalendarDays size={15}/>{monthServices.filter(s=>s.status!=='cancelled').length} cultos</span><span><CheckCheck size={15}/>{totalConfirmed} confirmações</span><span><UsersRound size={15}/>{Math.max(0,totalNeeded-totalActive)} vagas abertas</span></div>
+  </div>
+  <div className="sc-hero-buttons">{isPastor&&<Btn icon={Plus} onClick={()=>setCreating(true)}>Novo culto</Btn>}<Btn icon={Sparkles} variant="secondary" onClick={generate}>Gerar escala</Btn></div>
+ </div>
+ <div className="sc-toolbar">
+  <div className="sc-month-nav"><button type="button" aria-label="Mês anterior" onClick={prev}><ChevronLeft size={19}/></button><strong>{monthLabel(month)}</strong><button type="button" aria-label="Próximo mês" onClick={next}><ChevronRight size={19}/></button></div>
+  <div className="sc-filters" role="group" aria-label="Filtrar cultos">
+   {[
+    ['all','Todos os cultos'],
+    ['vacancies','Com vagas'],
+    ['pending','Aguardando respostas']
+   ].map(([id,label])=><button key={id} type="button" className={filter===id?'current':''} onClick={()=>setFilter(id)} aria-pressed={filter===id}>{label}</button>)}
+  </div>
+ </div>
+ {monthServices.length===0?<div className="sc-empty"><Empty icon={CalendarDays} title="Seu mês está livre por enquanto" subtitle={isPastor?'Crie o primeiro culto para começar a organizar os ministérios.':'Os cultos aparecerão quando o pastor cadastrar a programação.'} action={isPastor?<Btn icon={Plus} onClick={()=>setCreating(true)}>Adicionar culto</Btn>:null}/></div>:
+ (()=>{const filtered=monthServices.filter(s=>{
+    const related=monthAssignments.filter(a=>a.service_id===s.id);
+    const filled=related.filter(a=>['pending','confirmed','completed'].includes(a.state)).length;
+    const needed=ministries.reduce((n,m)=>n+minimumForMinistry(m,functions),0);
+    return filter==='all'||(filter==='vacancies'&&s.status!=='cancelled'&&filled<needed)||(filter==='pending'&&related.some(a=>a.state==='pending'));
+   });
+   return filtered.length===0?<div className="sc-empty"><Empty icon={CheckCheck} title="Nenhum culto neste filtro" subtitle="Você pode voltar a ver todos os cultos." action={<Btn variant="secondary" onClick={()=>setFilter('all')}>Mostrar todos</Btn>}/></div>:
+    <div className="sc-cards">{filtered.map(s=><ScheduleCard key={s.id} service={s} assignments={monthAssignments.filter(a=>a.service_id===s.id)} ministries={ministries} functions={functions} members={members} onOpen={setOpenService}/>)}</div>;
+ })()}
  {preview&&<Modal title="Prévia da escala automática" onClose={()=>setPreview(null)} footer={<><Btn variant="secondary" onClick={()=>setPreview(null)}>Voltar</Btn><Btn disabled={!preview.assignments.length||busy} icon={CheckCheck} onClick={savePreview}>Salvar convocações</Btn></>}>
    <div className="hero" style={{padding:17,marginBottom:16}}><div><div className="eyebrow" style={{color:'#c1bfff'}}>RESULTADO DA ANÁLISE</div><h2>{preview.assignments.length} novas convocações</h2><p>{preview.missing.length} posições sem candidato ou pendentes de configuração.</p></div><Sparkles size={39} color="#c2bbff"/></div>
    <p className="note">As sugestões respeitam a disponibilidade e as qualificações aprovadas, mas precisam da revisão da liderança. O banco valida novamente as atribuições.</p>
