@@ -3,6 +3,7 @@ import React,{useMemo,useState} from 'react';
 import {Church,UsersRound,CalendarDays,Clock3,ShieldCheck,Music2,RotateCcw,CheckCheck,UserRound,Search,Plus,Send,Download,ArrowRight,HeartHandshake,SlidersHorizontal,AlertTriangle} from 'lucide-react';
 import {AppShell} from './AppShell';
 import {Dashboard} from './Dashboard';
+import {WhatsAppSettings} from './WhatsAppSettings';
 import {Panel,PageHead,Metric,Badge,Btn,Empty,Avatar,Modal,dateFmt,monthKey,monthLabel} from './ui';
 import roster from '../../fixtures/demo-roster.json';
 
@@ -181,6 +182,7 @@ export default function DemoPortal(){
   setAssignments(v=>[...v,...fresh]);setMessage(fresh.length+' novas convocações fictícias geradas.')};
  const navigate=s=>{setSection(s);setMessage('')};
  const rendered=()=>{
+  if(section==='whatsapp'&&role==='pastor')return <WhatsAppSettings demo/>;
   if(section==='dashboard'&&role!=='volunteer')return <Dashboard role={role} profile={user} ministries={scope} functions={functions} services={services} assignments={visibleAssignments} members={visibleMembers} month={month} setMonth={setMonth} onNavigate={navigate} selectedMinistry={selectedMinistry} setSelectedMinistry={setSelectedMinistry}/>;
   if(section==='escalas'&&role!=='volunteer')return <DemoCalendar role={role} ministries={scope} services={services} assignments={visibleAssignments} month={month} onAdd={addCult} onGenerate={generate}/>;
   if(section==='equipe'&&role!=='volunteer')return <DemoPeople people={visibleMembers} ministries={scope} onApprove={approve}/>;
