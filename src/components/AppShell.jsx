@@ -1,6 +1,6 @@
 'use client';
 import React,{useState} from 'react';
-import {Church,LayoutDashboard,CalendarRange,UsersRound,UserRound,Clock3,Layers3,LogOut,Menu,X,HeartHandshake,Shield} from 'lucide-react';
+import {Church,LayoutDashboard,CalendarRange,UsersRound,UserRound,Clock3,Layers3,LogOut,Menu,X,HeartHandshake,Shield,MessageCircle} from 'lucide-react';
 import {Avatar} from './ui';
 const nav={
  dashboard:{title:'Início',icon:LayoutDashboard},
@@ -10,12 +10,13 @@ const nav={
  minhas:{title:'Minhas escalas',icon:HeartHandshake},
  disponibilidade:{title:'Disponibilidade',icon:Clock3},
  perfil:{title:'Meu perfil',icon:UserRound},
- lideres:{title:'Líderes',icon:Shield}
+ lideres:{title:'Líderes',icon:Shield},
+ whatsapp:{title:'WhatsApp',icon:MessageCircle}
 };
 export function AppShell({profile,role='volunteer',section,setSection,pending=0,signOut,children}){
  const [open,setOpen]=useState(false);
  const isAdmin=role==='pastor'||role==='leader';
- const primary=isAdmin?['dashboard','escalas','equipe']:['minhas','disponibilidade'];
+ const primary=role==='pastor'?['dashboard','escalas','equipe','whatsapp']:role==='leader'?['dashboard','escalas','equipe']:['minhas','disponibilidade'];
  const secondary=isAdmin?['ministerios',...(role==='pastor'?['lideres']:[]),'minhas','disponibilidade','perfil']:['perfil'];
  const [moreOverride,setMoreOverride]=useState(null);
  const moreOpen=moreOverride===null?secondary.includes(section):moreOverride;
