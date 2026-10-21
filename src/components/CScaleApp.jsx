@@ -6,6 +6,7 @@ import {monthKey,Avatar,Btn} from './ui';
 import {AppShell} from './AppShell';
 import {Dashboard} from './Dashboard';
 import {SchedulePages} from './SchedulePages';
+import {WhatsAppSettings} from './WhatsAppSettings';
 import {TeamPage,MinistriesPage,LeadersPage} from './TeamPages';
 import {VolunteerSchedule,AvailabilityPage,ProfilePage} from './VolunteerPages';
 
@@ -134,6 +135,7 @@ export default function CScaleApp({expectedSlug=null}){
  const render=()=>{
   if(section==='dashboard'&&isAdmin)return <Dashboard {...shared} selectedMinistry={selectedMinistry} setSelectedMinistry={setSelectedMinistry} onNavigate={setSection}/>;
   if(section==='escalas'&&isAdmin)return <SchedulePages {...shared}/>;
+  if(section==='whatsapp'&&role==='pastor')return <WhatsAppSettings client={client}/>;
   if(section==='equipe'&&isAdmin)return <TeamPage {...shared}/>;
   if(section==='ministerios'&&isAdmin)return <MinistriesPage {...shared}/>;
   if(section==='lideres'&&role==='pastor')return <LeadersPage {...shared} allLeaders={data.allLeaders} leaderScopes={data.leaderScopes}/>;
