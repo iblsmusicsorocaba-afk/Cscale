@@ -42,11 +42,12 @@ export default function CScaleApp({expectedSlug=null}){
   setLoading(true);
   const get=async query=>{const {data,error}=await query;if(error)throw error;return data};
   try{
-   const [profile,allMinistries,functions]=await Promise.all([
-    get(client.from('profiles').select('*').eq('user_id',user.id).maybeSingle()),
-    get(client.from('ministries').select('*').order('name')),
-    get(client.from('functions').select('*').order('name'))
-   ]);
+   const profile=await get(client.from('profiles').select('*').eq('user_id',user.id).maybeSingle());
+   const churchId=profile?.church_id||CHURCH;
+   const allMinistries=await get(client.from('ministries').select('*').eq('church_id',churchId).order('name'));
+   const allFunctions=await get(client.from('functions').select('*').order('name'));
+   const permittedIds=new Set((allMinistries||[]).map(m=>m.id));
+   const functions=(allFunctions||[]).filter(f=>permittedIds.has(f.ministry_id));
    const base={...emptyData,profile,ministries:allMinistries||[],functions:functions||[]};
    if(!profile){if(serial===loadingSerial.current)setData(base);return}
    const [manager,scopes,myRoles,availability,exceptions,services,myAssignments]=await Promise.all([
@@ -55,13 +56,13 @@ export default function CScaleApp({expectedSlug=null}){
     get(client.from('profile_roles').select('*').eq('profile_id',profile.id)),
     get(client.from('availability').select('*').eq('profile_id',profile.id)),
     get(client.from('availability_exceptions').select('*').eq('profile_id',profile.id)),
-    get(client.from('services').select('*').order('starts_at',{ascending:true}).limit(600)),
+    get(client.from('services').select('*').eq('church_id',profile.church_id).order('starts_at',{ascending:true}).limit(600)),
     get(client.from('assignments').select('*').eq('profile_id',profile.id))
    ]);
    Object.assign(base,{manager,scopes:scopes||[],myRoles:myRoles||[],availability:availability||[],exceptions:exceptions||[],services:services||[],myAssignments:myAssignments||[]});
    if(manager){
     const [profiles,roles,available,excepts,assignments,allLeaders,leaderScopes]=await Promise.all([
-     get(client.from('profiles').select('*').eq('church_id',CHURCH)),
+     get(client.from('profiles').select('*').eq('church_id',profile.church_id)),
      get(client.from('profile_roles').select('*')),
      get(client.from('availability').select('*')),
      get(client.from('availability_exceptions').select('*')),
@@ -71,6 +72,7 @@ export default function CScaleApp({expectedSlug=null}){
     ]);
     const allowed=new Set((scopes||[]).filter(s=>s.profile_id===profile.id).map(s=>s.ministry_id));
     const pastor=manager.role==='pastor';
+    const localProfiles=new Set((profiles||[]).map(p=>p.id));
     const memberships=roles||[];
     const memberProfiles=(profiles||[]).filter(p=>pastor||memberships.some(r=>r.profile_id===p.id&&allowed.has(r.ministry_id)));
     base.members=memberProfiles.map(p=>({...p,
@@ -79,9 +81,9 @@ export default function CScaleApp({expectedSlug=null}){
       availability_exceptions:(excepts||[]).filter(x=>x.profile_id===p.id)
     }));
     base.profiles=profiles||[];
-    base.assignments=(assignments||[]).filter(a=>pastor||allowed.has(a.ministry_id));
-    base.allLeaders=allLeaders||[];
-    base.leaderScopes=leaderScopes||[];
+    base.assignments=(assignments||[]).filter(a=>(pastor||allowed.has(a.ministry_id))&&permittedIds.has(a.ministry_id)&&localProfiles.has(a.profile_id));
+    base.allLeaders=(allLeaders||[]).filter(x=>localProfiles.has(x.profile_id));
+    base.leaderScopes=(leaderScopes||[]).filter(x=>permittedIds.has(x.ministry_id));
    }
    const ids=[...new Set((myAssignments||[]).map(x=>x.service_id))];
    const teamRows=await Promise.all(ids.map(async id=>{
